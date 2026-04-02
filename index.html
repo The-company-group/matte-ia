@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Closer's Matte IA — Dashboard Live</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
+  :root {
+    --bg: #020617; --surface: rgba(15,23,42,0.92); --border: rgba(255,255,255,0.06);
+    --text: #E2E8F0; --text2: #94A3B8; --text3: #64748B; --text4: #475569;
+    --pink: #E040FB; --cyan: #00E5FF; --orange: #FF6D00; --green: #76FF03;
+    --yellow: #FFD740; --red: #FF5252;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Plus Jakarta Sans', system-ui, sans-serif; min-height: 100vh; }
+  button { font-family: inherit; }
+  ::-webkit-scrollbar { height: 3px; width: 3px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+  .container { max-width: 1100px; margin: 0 auto; padding: 28px 20px 60px; position: relative; z-index: 1; }
+  .glow { position: fixed; border-radius: 50%; pointer-events: none; z-index: 0; }
+  .glow-1 { width: 600px; height: 600px; background: radial-gradient(circle, rgba(224,64,251,0.06), transparent 70%); top: -200px; left: -100px; }
+  .glow-2 { width: 500px; height: 500px; background: radial-gradient(circle, rgba(0,229,255,0.04), transparent 70%); bottom: -150px; right: -100px; }
+
+  .card { background: var(--surface); backdrop-filter: blur(20px); border: 1px solid var(--border); border-radius: 20px; padding: 24px; }
+  .tabs { display: flex; gap: 4px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 22px; }
+  .tab { padding: 8px 14px; border-radius: 10px; border: none; cursor: pointer; font-size: 10px; font-weight: 700; letter-spacing: 0.5px; white-space: nowrap; background: rgba(255,255,255,0.03); color: var(--text3); transition: all 0.25s; }
+  .tab:hover { filter: brightness(1.15); }
+  .tab.active { color: var(--bg); transform: scale(1.05); }
+  .tab.active.month { background: linear-gradient(135deg, var(--pink), var(--cyan)); box-shadow: 0 4px 16px rgba(224,64,251,0.25); }
+  .tab.active.special { background: linear-gradient(135deg, var(--orange), var(--yellow)); box-shadow: 0 4px 16px rgba(255,109,0,0.25); }
+
+  .grid { display: grid; gap: 14px; }
+  .grid-3 { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+  .grid-4 { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+
+  .kpi-label { font-size: 9px; color: var(--text3); text-transform: uppercase; letter-spacing: 2px; font-weight: 700; }
+  .kpi-value { font-size: 38px; font-weight: 900; color: #fff; line-height: 1; margin: 8px 0 4px; }
+  .kpi-sub { font-size: 11px; color: var(--text2); }
+
+  .mini-kpi { background: rgba(0,0,0,0.25); border-radius: 10px; padding: 8px 10px; }
+  .mini-kpi-label { font-size: 8px; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; font-weight: 700; }
+  .mini-kpi-value { font-size: 16px; font-weight: 800; margin-top: 2px; }
+
+  .section-label { font-size: 9px; color: var(--text3); text-transform: uppercase; letter-spacing: 3px; font-weight: 700; margin: 4px 0; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  th { padding: 6px 4px; color: var(--text3); font-size: 8px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; }
+  td { padding: 5px 4px; }
+  thead tr { border-bottom: 1px solid var(--border); }
+  tbody tr { border-bottom: 1px solid rgba(255,255,255,0.03); }
+
+  .closer-avatar { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 900; flex-shrink: 0; }
+  .bar-track { height: 28px; background: rgba(255,255,255,0.03); border-radius: 6px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 6px; display: flex; align-items: center; justify-content: flex-end; padding-right: 8px; font-size: 11px; font-weight: 700; color: #fff; transition: width 0.8s ease; }
+
+  .progress-bar-sm { height: 8px; background: rgba(255,255,255,0.04); border-radius: 4px; overflow: hidden; margin-top: 12px; }
+  .progress-fill-sm { height: 100%; border-radius: 4px; transition: width 1s ease; }
+
+  .podium-bar { border-radius: 8px 8px 0 0; margin-top: 4px; }
+  .animate-in { animation: fadeIn 0.4s ease; }
+  .loading-spinner { width: 24px; height: 24px; border: 3px solid var(--border); border-top-color: var(--pink); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
+</style>
+</head>
+<body>
+
+<div class="glow glow-1"></div>
+<div class="glow glow-2"></div>
+
+<div class="container" id="app">
+  <div style="text-align:center; padding: 80px 0;">
+    <div class="loading-spinner"></div>
+    <div style="color: var(--text2); font-size: 14px;">Conectando ao Google Sheets...</div>
+  </div>
+</div>
+
+<script>
+const API_URL = "https://script.google.com/macros/s/AKfycbyIimsLEQzXYvvu2Au5ahSj3xAgktbh0tYR3xryRQicVqpC8RmgYJRz_ewPcvFtc9QI/exec";
+const MONTH_ORDER = ["FEVEREIRO","MARÇO","ABRIL","MAIO","JUNHO","JULHO","AGOSTO","SETEMBRO","OUTUBRO","NOVEMBRO","DEZEMBRO"];
+const MS = {FEVEREIRO:"FEV","MARÇO":"MAR",ABRIL:"ABR",MAIO:"MAI",JUNHO:"JUN",JULHO:"JUL",AGOSTO:"AGO",SETEMBRO:"SET",OUTUBRO:"OUT",NOVEMBRO:"NOV",DEZEMBRO:"DEZ"};
+const COLORS = {LETICIA:"#E040FB",Lizandra:"#00E5FF","Lizandra ":"#00E5FF",WANDERSON:"#FF6D00","ANTÔNIO":"#76FF03",ANTONIO:"#76FF03"};
+
+let DATA = null;
+let currentTab = null;
+let lastUpdate = null;
+let loading = true;
+let error = null;
+
+const getColor = (n) => { n = (n||"").trim(); return COLORS[n] || Object.entries(COLORS).find(([k])=>n.toUpperCase().includes(k.toUpperCase()))?.[1] || "#E040FB"; };
+const fmt = (v) => (v==null||v===0)?"0":typeof v==="number"?v.toLocaleString("pt-BR",{maximumFractionDigits:2}):String(v);
+const fR = (v) => (v==null||v===0)?"R$ 0":"R$ "+Math.round(v).toLocaleString("pt-BR");
+const pct = (v) => v==null?"—":(v*100).toFixed(1)+"%";
+const esc = (s) => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+
+async function fetchData() {
+  try {
+    loading = true;
+    render();
+    const res = await fetch(API_URL);
+    const raw = await res.json(); const json = raw.meses || raw;
+    const sorted = [];
+    MONTH_ORDER.forEach(m => {
+      const found = json.find(x => (x.month||"").toUpperCase().trim() === m);
+      if (found) sorted.push({...found, month: m});
+    });
+    DATA = sorted.length > 0 ? sorted : json;
+    lastUpdate = new Date();
+    error = null;
+    if (!currentTab) {
+      const first = DATA.find(d => (d.general?.total_vgv||0) > 0);
+      currentTab = first?.month || DATA[0]?.month || "MARÇO";
+    }
+  } catch(e) {
+    error = e.message;
+  } finally {
+    loading = false;
+    render();
+  }
+}
+
+function ringSVG(value, max, size, stroke, color) {
+  const p = max > 0 ? Math.min(value/max, 1) : 0;
+  const dp = max > 0 ? Math.min((value/max)*100, 999) : 0;
+  const r = (size-stroke)/2;
+  const c = 2*Math.PI*r;
+  return `<div style="position:relative;width:${size}px;height:${size}px;margin:0 auto">
+    <svg width="${size}" height="${size}" style="transform:rotate(-90deg)">
+      <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="${stroke}"/>
+      <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${color}" stroke-width="${stroke}" stroke-linecap="round" stroke-dasharray="${c}" stroke-dashoffset="${c - p*c}" style="transition:stroke-dashoffset 1.5s cubic-bezier(0.4,0,0.2,1)"/>
+    </svg>
+    <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">
+      <span style="font-size:${size>100?22:15}px;font-weight:900;color:#fff">${dp.toFixed(0)}%</span>
+    </div>
+  </div>`;
+}
+
+function sparkSVG(data, color, w, h) {
+  if (!data || data.length < 2 || data.every(v=>!v)) return "";
+  const max = Math.max(...data, 1);
+  const pts = data.map((v,i) => `${(i/(data.length-1))*w},${h-((v||0)/max)*h}`).join(" ");
+  return `<svg width="${w}" height="${h}"><polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+}
+
+function funnelHTML(stages, color) {
+  const max = Math.max(...stages.map(s=>s.value), 1);
+  return stages.map((s,i) => {
+    const w = Math.max(8, (s.value/max)*100);
+    const rate = s.rate != null && s.rate > 0 ? `<div style="font-size:10px;color:${color};font-weight:700;width:48px;text-align:right">${pct(s.rate)}</div>` : "";
+    return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+      <div style="width:80px;font-size:10px;color:var(--text2);text-align:right;font-weight:600">${esc(s.label)}</div>
+      <div style="flex:1"><div class="bar-track"><div class="bar-fill" style="width:${w}%;background:${color};opacity:${1-i*0.18}">${fmt(s.value)}</div></div></div>
+      ${rate}
+    </div>`;
+  }).join("");
+}
+
+function metricsTableHTML(metrics, color) {
+  if (!metrics || Object.keys(metrics).length === 0) return "";
+  const isRate = k => k.toLowerCase().includes("tx");
+  const isMoney = k => k.includes("V.G.V") || k.includes("TKT");
+  const fV = (k,v) => { if(v==null||v===0) return "\u2014"; if(isRate(k)) return pct(v); if(isMoney(k)) return fR(v); return fmt(v); };
+  const headers = ["Funil","Meta","S1","S2","S3","S4","S5","Media","Total"];
+  let html = `<div style="overflow-x:auto"><table><thead><tr style="border-bottom:1px solid ${color}22">`;
+  headers.forEach(h => { html += `<th style="text-align:${h==='Funil'?'left':'center'}">${h}</th>`; });
+  html += `</tr></thead><tbody>`;
+  Object.entries(metrics).forEach(([k,v]) => {
+    const hl = k.includes("V.G.V") || k === "Venda";
+    html += `<tr style="background:${hl?color+'08':'transparent'}">`;
+    html += `<td style="font-weight:700;color:var(--text);font-size:10px">${esc(k)}</td>`;
+    html += `<td style="text-align:center;color:var(--text4);font-size:10px">${fV(k,v.meta)}</td>`;
+    ["s1","s2","s3","s4","s5"].forEach(s => { html += `<td style="text-align:center;color:#CBD5E1;font-size:10px">${fV(k,v[s])}</td>`; });
+    html += `<td style="text-align:center;color:${color};font-weight:600;font-size:10px">${fV(k,v.media)}</td>`;
+    html += `<td style="text-align:center;color:${hl?'var(--green)':'#fff'};font-weight:800;font-size:11px">${fV(k,v.total)}</td>`;
+    html += `</tr>`;
+  });
+  html += `</tbody></table></div>`;
+  return html;
+}
+
+function renderMonth(d) {
+  if (!d) return `<div class="card" style="text-align:center;padding:40px;color:var(--text4)">Sem dados</div>`;
+  const tv = d.general?.total_vgv||0, tVen = d.general?.total_vendas||0, tShow = d.general?.total_show||0, tNS = d.general?.total_noshow||0;
+  const meta = d.general?.meta_vgv||650000;
+  const gm = d.general?.metrics;
+  const hasGM = gm && Object.keys(gm).length > 0 && tv > 0;
+
+  let html = `<div class="grid grid-3" style="margin-bottom:20px">`;
+  html += `<div class="card" style="text-align:center;background:linear-gradient(135deg,rgba(224,64,251,0.08),var(--surface))">
+    ${ringSVG(tv, meta, 110, 10, "var(--pink)")}
+    <div style="font-size:10px;color:var(--text2);font-weight:600;margin-top:6px">Atingimento Meta</div>
+    <div style="font-size:9px;color:var(--text3)">${fR(tv)} / ${fR(meta)}</div>
+  </div>`;
+  html += `<div class="card"><div class="kpi-label">Vendas</div><div class="kpi-value">${tVen}</div><div class="kpi-sub">Tkt medio: <b style="color:var(--pink)">${tVen>0?fR(tv/tVen):"R$ 0"}</b></div></div>`;
+  html += `<div class="card"><div class="kpi-label">Shows / No Show</div><div style="display:flex;align-items:baseline;gap:8px;margin:8px 0 4px"><span class="kpi-value" style="font-size:38px">${tShow}</span><span style="font-size:16px;color:var(--orange);font-weight:700">/ ${tNS}</span></div><div class="kpi-sub">Tx conv: <b style="color:var(--cyan)">${tShow>0?pct(tVen/tShow):"0%"}</b></div></div>`;
+  html += `</div>`;
+
+  if (hasGM) {
+    html += `<div class="card" style="margin-bottom:20px"><h3 style="font-size:14px;font-weight:700;color:#fff;margin:0 0 16px">Funil Geral</h3>`;
+    html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">`;
+    html += `<div>${funnelHTML([
+      {label:"Marcadas",value:gm.Marcadas?.total||0},
+      {label:"Shows",value:gm.Show?.total||0,rate:gm["Tx Show"]?.total},
+      {label:"SQL",value:gm.SQL?.total||0},
+      {label:"Vendas",value:gm.Venda?.total||0}
+    ], "var(--pink)")}</div>`;
+    html += `<div>`;
+    if (gm["V.G.V"]) {
+      html += `<div class="section-label" style="margin-bottom:8px">V.G.V Semanal</div>`;
+      html += sparkSVG([gm["V.G.V"].s1,gm["V.G.V"].s2,gm["V.G.V"].s3,gm["V.G.V"].s4,gm["V.G.V"].s5],"#E040FB",200,50);
+      html += `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">`;
+      ["s1","s2","s3","s4","s5"].forEach((s,i) => {
+        html += `<div style="background:rgba(0,0,0,0.3);border-radius:6px;padding:3px 8px;font-size:9px"><b style="color:var(--pink)">S${i+1}</b> <span style="color:var(--text)">${fR(gm["V.G.V"][s]||0)}</span></div>`;
+      });
+      html += `</div>`;
+    }
+    html += `</div></div></div>`;
+  }
+
+  html += `<div class="section-label" style="margin-bottom:12px">Performance Individual</div>`;
+  d.closers.forEach((c, ci) => {
+    const clr = getColor(c.name);
+    const mV = c.meta_vgv||0;
+    const hasM = c.metrics && Object.keys(c.metrics).length > 0;
+    const vD = c.metrics?.["V.G.V"];
+    const sp = vD ? [vD.s1,vD.s2,vD.s3,vD.s4,vD.s5] : [];
+
+    html += `<div class="card" style="border-left:3px solid ${clr};margin-bottom:16px">`;
+    html += `<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:14px;margin-bottom:16px">`;
+    html += `<div style="display:flex;align-items:center;gap:10px">
+      <div class="closer-avatar" style="background:${clr}22;color:${clr}">${esc((c.name||"?")[0])}</div>
+      <div><div style="font-weight:800;font-size:17px;color:#fff">${esc(c.name)}</div><div style="font-size:10px;color:var(--text3)">Meta: ${fR(mV)}</div></div>
+    </div>`;
+    html += `<div style="display:flex;gap:14px;align-items:center">`;
+    if (mV > 0) html += ringSVG(c.vgv||0, mV, 68, 6, clr);
+    html += sparkSVG(sp, clr, 100, 36);
+    html += `</div></div>`;
+
+    html += `<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:8px;margin-bottom:${hasM?14:0}px">`;
+    [{l:"V.G.V",v:fR(c.vgv||0),c:clr},{l:"Vendas",v:fmt(c.venda||0),c:"var(--green)"},{l:"Shows",v:fmt(c.show||0),c:"var(--cyan)"},{l:"No Show",v:fmt(c.noshow||0),c:"var(--orange)"}].forEach(k => {
+      html += `<div class="mini-kpi"><div class="mini-kpi-label">${k.l}</div><div class="mini-kpi-value" style="color:${k.c}">${k.v}</div></div>`;
+    });
+    if (c.sql) html += `<div class="mini-kpi"><div class="mini-kpi-label">SQL</div><div class="mini-kpi-value" style="color:var(--yellow)">${fmt(c.sql)}</div></div>`;
+    html += `</div>`;
+
+    if (hasM) html += metricsTableHTML(c.metrics, clr);
+    else html += `<div style="font-size:11px;color:#334155;font-style:italic">Aguardando dados</div>`;
+    html += `</div>`;
+  });
+
+  return html;
+}
+
+function renderRanking() {
+  const all = {};
+  DATA.forEach(m => m.closers.forEach(c => {
+    const n = (c.name||"").trim(); if (!n) return;
+    if (!all[n]) all[n] = {name:n,vgv:0,vendas:0,show:0,noshow:0,months:[]};
+    all[n].vgv += c.vgv||0; all[n].vendas += c.venda||0; all[n].show += c.show||0;
+    if ((c.vgv||0) > 0) all[n].months.push({m:m.month, vgv:c.vgv, v:c.venda||0});
+  }));
+  const rk = Object.values(all).sort((a,b) => b.vgv - a.vgv);
+  const top = rk[0]?.vgv||1;
+  const medals = ["\u{1F947}","\u{1F948}","\u{1F949}","4\u00BA"];
+
+  let html = `<div class="card" style="background:linear-gradient(135deg,rgba(224,64,251,0.06),rgba(0,229,255,0.04),var(--surface));padding-bottom:0;margin-bottom:20px">`;
+  html += `<div style="text-align:center;font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:3px;font-weight:700;margin-bottom:20px">Podio de Closers</div>`;
+  html += `<div style="display:flex;justify-content:center;align-items:flex-end;gap:20px">`;
+  [1,0,2].forEach(idx => {
+    const r = rk[idx]; if(!r) return;
+    const clr = getColor(r.name);
+    const h = [160,200,120][idx===0?1:idx===1?0:2];
+    html += `<div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+      <span style="font-size:30px">${medals[idx]}</span>
+      <div style="width:50px;height:50px;border-radius:14px;background:${clr}22;border:2px solid ${clr};display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;color:${clr}">${esc(r.name[0])}</div>
+      <div style="font-weight:800;color:#fff;font-size:12px">${esc(r.name)}</div>
+      <div style="font-size:11px;color:${clr};font-weight:700">${fR(r.vgv)}</div>
+      <div style="font-size:9px;color:var(--text2)">${r.vendas} vendas</div>
+      <div class="podium-bar" style="width:56px;height:${h}px;background:linear-gradient(to top,${clr}55,${clr}11)"></div>
+    </div>`;
+  });
+  html += `</div></div>`;
+
+  rk.forEach((c,i) => {
+    const clr = getColor(c.name);
+    html += `<div class="card" style="border-left:3px solid ${clr};margin-bottom:14px">`;
+    html += `<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+      <div style="display:flex;align-items:center;gap:12px">
+        <span style="font-size:26px">${medals[i]||(i+1)+"\u00BA"}</span>
+        <div><div style="font-weight:800;font-size:17px;color:${clr}">${esc(c.name)}</div>
+        <div style="font-size:10px;color:var(--text3)">${c.vendas} vendas - ${c.show} shows - Tkt: ${c.vendas>0?fR(c.vgv/c.vendas):"\u2014"}</div></div>
+      </div>
+      <div style="font-size:22px;font-weight:900;color:#fff">${fR(c.vgv)}</div>
+    </div>`;
+    html += `<div class="progress-bar-sm"><div class="progress-fill-sm" style="width:${Math.max(2,(c.vgv/top)*100)}%;background:linear-gradient(90deg,${clr}88,${clr})"></div></div>`;
+    if (c.months.length > 0) {
+      html += `<div style="display:flex;gap:5px;margin-top:10px;flex-wrap:wrap">`;
+      c.months.forEach(m => {
+        html += `<div style="background:rgba(0,0,0,0.3);border-radius:7px;padding:4px 9px;font-size:9px"><b style="color:${clr}">${MS[m.m]||m.m}</b>: ${fR(m.vgv)} (${m.v}v)</div>`;
+      });
+      html += `</div>`;
+    }
+    html += `</div>`;
+  });
+  return html;
+}
+
+function renderAnnual() {
+  const mt = MONTH_ORDER.map(month => {
+    const d = DATA.find(x => x.month.toUpperCase() === month);
+    return {month, s:MS[month], vgv:d?.general?.total_vgv||0, vendas:d?.general?.total_vendas||0, show:d?.general?.total_show||0, meta:d?.general?.meta_vgv||650000};
+  });
+  const tV = mt.reduce((a,m)=>a+m.vgv,0), tVen = mt.reduce((a,m)=>a+m.vendas,0), tS = mt.reduce((a,m)=>a+m.show,0), tM = mt.reduce((a,m)=>a+m.meta,0);
+  const maxV = Math.max(...mt.map(m=>m.vgv),1);
+  const closerNames = [...new Set(DATA.flatMap(m=>m.closers.map(c=>(c.name||"").trim())).filter(Boolean))];
+
+  let html = `<div class="grid grid-4" style="margin-bottom:20px">`;
+  html += `<div class="card" style="text-align:center;background:linear-gradient(135deg,rgba(224,64,251,0.08),var(--surface))">${ringSVG(tV,tM,100,10,"#E040FB")}<div style="font-size:10px;color:var(--text2);font-weight:600;margin-top:4px">Meta Anual</div><div style="font-size:9px;color:var(--text3)">${fR(tV)}</div></div>`;
+  html += `<div class="card"><div class="kpi-label" style="font-size:8px">Faturamento</div><div style="font-size:26px;font-weight:900;color:var(--green);margin-top:6px">${fR(tV)}</div></div>`;
+  html += `<div class="card"><div class="kpi-label" style="font-size:8px">Vendas / Shows</div><div style="font-size:26px;font-weight:900;color:var(--cyan);margin-top:6px">${tVen} <span style="font-size:13px;color:var(--text3)">/ ${tS}</span></div></div>`;
+  html += `<div class="card"><div class="kpi-label" style="font-size:8px">Ticket Medio</div><div style="font-size:26px;font-weight:900;color:var(--yellow);margin-top:6px">${tVen>0?fR(tV/tVen):"\u2014"}</div></div>`;
+  html += `</div>`;
+
+  html += `<div class="card" style="margin-bottom:20px"><h3 style="font-size:13px;font-weight:700;margin:0 0 14px;color:#fff">V.G.V Mes a Mes</h3>`;
+  html += `<div style="display:flex;align-items:flex-end;gap:5px;height:170px;padding:0 0 20px">`;
+  mt.forEach(m => {
+    const h = maxV > 0 ? Math.max(3, (m.vgv/maxV)*140) : 3;
+    const clr = m.vgv >= m.meta ? "var(--green)" : m.vgv > 0 ? "var(--pink)" : "#1E293B";
+    html += `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px">`;
+    if (m.vgv > 0) html += `<div style="font-size:8px;color:var(--text2);font-weight:700;white-space:nowrap">${fR(m.vgv)}</div>`;
+    html += `<div style="width:100%;height:${h}px;background:${clr};border-radius:4px 4px 0 0;opacity:${m.vgv>0?0.85:0.15}"></div>`;
+    html += `<div style="font-size:8px;color:var(--text3);font-weight:700">${m.s}</div></div>`;
+  });
+  html += `</div></div>`;
+
+  html += `<div class="card" style="margin-bottom:20px"><h3 style="font-size:13px;font-weight:700;margin:0 0 10px;color:#fff">Comparativo</h3><div style="overflow-x:auto"><table>`;
+  html += `<thead><tr>`;
+  ["Mes","V.G.V","Meta","% Meta","Vendas","Shows","Tkt"].forEach(h => {
+    html += `<th style="text-align:${h==='Mes'?'left':'right'}">${h}</th>`;
+  });
+  html += `</tr></thead><tbody>`;
+  mt.forEach(m => {
+    const p = m.meta>0?(m.vgv/m.meta)*100:0;
+    const pClr = p>=100?"var(--green)":p>5?"var(--yellow)":"var(--red)";
+    const pBg = p>=100?"rgba(118,255,3,0.1)":p>5?"rgba(255,215,64,0.1)":"rgba(255,82,82,0.06)";
+    html += `<tr><td style="font-weight:700">${m.s}</td><td style="text-align:right;color:var(--green);font-weight:700">${fR(m.vgv)}</td><td style="text-align:right;color:var(--text4)">${fR(m.meta)}</td>`;
+    html += `<td style="text-align:right"><span style="padding:2px 7px;border-radius:7px;font-size:10px;font-weight:700;background:${pBg};color:${pClr}">${p.toFixed(1)}%</span></td>`;
+    html += `<td style="text-align:right">${m.vendas}</td><td style="text-align:right">${m.show}</td><td style="text-align:right;color:var(--pink);font-weight:600">${m.vendas>0?fR(m.vgv/m.vendas):"\u2014"}</td></tr>`;
+  });
+  html += `<tr style="background:rgba(224,64,251,0.06)"><td style="padding:9px 6px;font-weight:900">TOTAL</td><td style="text-align:right;font-weight:900;color:var(--green)">${fR(tV)}</td><td style="text-align:right;font-weight:700;color:var(--text4)">${fR(tM)}</td><td style="text-align:right"><span style="padding:2px 7px;border-radius:7px;font-size:10px;font-weight:800;background:rgba(224,64,251,0.12);color:var(--pink)">${(tV/tM*100).toFixed(1)}%</span></td><td style="text-align:right;font-weight:800">${tVen}</td><td style="text-align:right;font-weight:800">${tS}</td><td style="text-align:right;font-weight:800;color:var(--pink)">${tVen>0?fR(tV/tVen):"\u2014"}</td></tr>`;
+  html += `</tbody></table></div></div>`;
+
+  html += `<div class="card"><h3 style="font-size:13px;font-weight:700;margin:0 0 10px;color:#fff">Evolucao por Closer</h3><div style="overflow-x:auto"><table><thead><tr><th style="text-align:left">Closer</th>`;
+  MONTH_ORDER.forEach(m => { html += `<th style="text-align:center;font-size:7px">${MS[m]}</th>`; });
+  html += `<th style="text-align:right;color:var(--yellow)">Total</th></tr></thead><tbody>`;
+  closerNames.forEach(n => {
+    const tot = DATA.reduce((s,m)=>{const c=m.closers.find(x=>(x.name||"").trim()===n);return s+(c?.vgv||0)},0);
+    const clr = getColor(n);
+    html += `<tr><td style="font-weight:700;color:${clr}">${esc(n)}</td>`;
+    MONTH_ORDER.forEach(mo => {
+      const md = DATA.find(x=>x.month.toUpperCase()===mo);
+      const c = md?.closers.find(x=>(x.name||"").trim()===n);
+      const v = c?.vgv||0;
+      html += `<td style="text-align:center;color:${v>0?'var(--text)':'#1E293B'};font-size:9px">${v>0?fR(v):"\u2014"}</td>`;
+    });
+    html += `<td style="text-align:right;font-weight:800;color:${clr}">${fR(tot)}</td></tr>`;
+  });
+  html += `</tbody></table></div></div>`;
+  return html;
+}
+
+function render() {
+  const app = document.getElementById("app");
+  let html = "";
+
+  // Header
+  html += `<header style="margin-bottom:24px;display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:18px;border-bottom:1px solid var(--border)">`;
+  html += `<div><div style="font-size:9px;font-weight:700;letter-spacing:4px;text-transform:uppercase;color:var(--text3);margin-bottom:6px">Dashboard Estrategico - Live</div>`;
+  html += `<h1 style="font-size:28px;font-weight:900;margin:0"><span style="background:linear-gradient(135deg,#E040FB,#00E5FF);-webkit-background-clip:text;-webkit-text-fill-color:transparent">Closer's</span><span style="color:var(--text2);font-weight:400"> Matte IA</span><span style="color:var(--text4);font-size:13px;font-weight:400"> </span></h1></div>`;
+  html += `<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">`;
+  const statusClr = loading ? "var(--yellow)" : error ? "var(--red)" : "var(--green)";
+  const statusTxt = loading ? "Sincronizando..." : error ? "Erro" : "Conectado";
+  const statusBg = loading ? "rgba(255,215,64,0.08)" : error ? "rgba(255,82,82,0.08)" : "rgba(118,255,3,0.08)";
+  html += `<div style="display:flex;align-items:center;gap:5px;background:${statusBg};border-radius:16px;padding:4px 12px"><div style="width:6px;height:6px;border-radius:50%;background:${statusClr}${!loading&&!error?';animation:pulse 2s infinite':''}"></div><span style="font-size:9px;color:${statusClr};font-weight:600">${statusTxt}</span></div>`;
+  if (lastUpdate) html += `<div style="font-size:8px;color:var(--text4)">Atualizado: ${lastUpdate.toLocaleTimeString("pt-BR")}</div>`;
+  html += `<button onclick="fetchData()" style="font-size:8px;color:var(--text3);background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:6px;padding:3px 8px;cursor:pointer;font-family:inherit">Atualizar agora</button>`;
+  html += `</div></header>`;
+
+  if (error) {
+    html += `<div class="card" style="margin-bottom:16px;border-left:3px solid var(--red)"><div style="color:var(--red);font-size:12px;font-weight:700">Erro: ${esc(error)}</div><div style="color:var(--text3);font-size:10px;margin-top:4px">Verifique se o Apps Script foi implantado corretamente</div></div>`;
+  }
+
+  if (loading && !DATA) {
+    html += `<div style="text-align:center;padding:80px 0"><div class="loading-spinner"></div><div style="color:var(--text2);font-size:14px">Carregando dados da planilha...</div></div>`;
+    app.innerHTML = html;
+    return;
+  }
+
+  if (!DATA) { app.innerHTML = html; return; }
+
+  // Tabs
+  html += `<div class="tabs">`;
+  [...MONTH_ORDER, "RANKING", "ANUAL"].forEach(t => {
+    const a = currentTab === t;
+    const sp = t === "RANKING" || t === "ANUAL";
+    html += `<button class="tab ${a?'active':''} ${a?(sp?'special':'month'):''}" onclick="currentTab='${t}';render()">${t==="RANKING"?"Ranking":t==="ANUAL"?"Anual":MS[t]||t}</button>`;
+  });
+  html += `</div>`;
+
+  // Content
+  html += `<div class="animate-in">`;
+  if (currentTab === "RANKING") {
+    html += renderRanking();
+  } else if (currentTab === "ANUAL") {
+    html += renderAnnual();
+  } else {
+    const cd = DATA.find(d => d.month === currentTab);
+    html += renderMonth(cd);
+  }
+  html += `</div>`;
+
+  app.innerHTML = html;
+}
+
+// Start
+fetchData();
+setInterval(fetchData, 60000);
+</script>
+</body>
+</html>
